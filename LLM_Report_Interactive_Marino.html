@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Executive Report 2026 - Interaktive Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #7c3aed;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --border: #e2e8f0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--dark);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: var(--gray);
+            font-size: 1.1rem;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-tab {
+            padding: 12px 24px;
+            border: none;
+            background: var(--light);
+            color: var(--gray);
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tab:hover, .nav-tab.active {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+        }
+        
+        .section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card.accent {
+            background: linear-gradient(135deg, var(--accent), var(--success));
+        }
+        
+        .stat-card.warning {
+            background: linear-gradient(135deg, var(--warning), #f97316);
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+        
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .filter-group label {
+            font-size: 0.85rem;
+            color: var(--gray);
+            font-weight: 600;
+        }
+        
+        select, input {
+            padding: 10px 15px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            background: white;
+            min-width: 150px;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        
+        th {
+            background: var(--dark);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            position: sticky;
+            top: 0;
+        }
+        
+        th:hover {
+            background: #334155;
+        }
+        
+        th.sortable::after {
+            content: ' ↕';
+            opacity: 0.5;
+        }
+        
+        th.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+        
+        th.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        tr:hover {
+            background: rgba(37, 99, 235, 0.05);
+        }
+        
+        .model-name {
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .badge-premium {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+        }
+        
+        .badge-budget {
+            background: linear-gradient(135deg, #34d399, #10b981);
+            color: white;
+        }
+        
+        .badge-open {
+            background: linear-gradient(135deg, #a78bfa, #7c3aed);
+            color: white;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 30px 0;
+        }
+        
+        .comparison-tool {
+            background: var(--light);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .model-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .model-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .model-checkbox:hover {
+            border-color: var(--primary);
+        }
+        
+        .model-checkbox input {
+            min-width: auto;
+        }
+        
+        .model-checkbox.checked {
+            border-color: var(--primary);
+            background: rgba(37, 99, 235, 0.1);
+        }
+        
+        .insight-card {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border-left: 4px solid var(--warning);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .insight-card.danger {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            border-left-color: var(--danger);
+        }
+        
+        .insight-card.success {
+            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+            border-left-color: var(--success);
+        }
+        
+        .insight-title {
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: var(--dark);
+        }
+        
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .use-case-card {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .use-case-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .use-case-card.recommended {
+            border-color: var(--success);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), white);
+        }
+        
+        .roi-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .roi-high {
+            background: var(--success);
+            color: white;
+        }
+        
+        .roi-medium {
+            background: var(--warning);
+            color: white;
+        }
+        
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+        
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--dark);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8rem; }
+            .stats-grid { grid-template-columns: 1fr; }
+            table { font-size: 0.8rem; }
+            th, td { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 LLM Executive Report 2026</h1>
+            <p class="subtitle">Evaluierung der führenden KI-Modelle für den Unternehmenseinsatz</p>
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="showSection('overview')">📊 Übersicht</button>
+                <button class="nav-tab" onclick="showSection('comparison')">⚖️ Modell-Vergleich</button>
+                <button class="nav-tab" onclick="showSection('benchmarks')">📈 Benchmarks</button>
+                <button class="nav-tab" onclick="showSection('usecases')">💼 Use Cases</button>
+                <button class="nav-tab" onclick="showSection('insights')">💡 Insights</button>
+            </div>
+        </header>
+
+        <!-- Overview Section -->
+        <section id="overview" class="section active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">10</div>
+                    <div class="stat-label">Frontier Modelle analysiert</div>
+                </div>
+                <div class="stat-card accent">
+                    <div class="stat-value">80.8%</div>
+                    <div class="stat-label">Höchster SWE-Bench Score<br><small>Claude Opus 4.6</small></div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value">77.1%</div>
+                    <div class="stat-label">Höchster ARC-AGI-2 Score<br><small>Gemini 3.1 Pro</small></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">$0.10</div>
+                    <div class="stat-label">Niedrigster Preis/M Input<br><small>Nemotron 3 Super</small></div>
+                </div>
+            </div>
+
+            <div class="insight-card">
+                <div class="insight-title">🎯 Management Summary</div>
+                <p>Die KI-Landschaft im Frühjahr 2026 ist geprägt von drei gleichzeitigen Durchbrüchen innerhalb von nur 28 Tagen. 
+                Klassische Benchmarks wie MMLU sind nahezu gesättigt (>90% Standard). <strong>ARC-AGI-2</strong> ist der neue Differenzierer 
+                für fluide Intelligenz, während <strong>SWE-Bench</strong> reale Softwareentwicklungsfähigkeiten testet.</p>
+            </div>
+
+            <h2><span class="icon">📅</span>Release-Timeline 2026</h2>
+            <div class="chart-container">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Comparison Section -->
+        <section id="comparison" class="section">
+            <h2><span class="icon">⚖️</span>Modell-Vergleich</h2>
+            
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Kategorie filtern</label>
+                    <select id="categoryFilter" onchange="filterModels()">
+                        <option value="all">Alle Modelle</option>
+                        <option value="premium">Premium ($15+/M)</option>
+                        <option value="mid">Mid-Range ($5-15/M)</option>
+                        <option value="budget">Budget (<$5/M)</option>
+                        <option value="open">Open Source</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Sortieren nach</label>
+                    <select id="sortBy" onchange="sortModels()">
+                        <option value="arena">Arena ELO</option>
+                        <option value="swe">SWE-Bench</option>
+                        <option value="arc">ARC-AGI-2</option>
+                        <option value="price">Preis (Input)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table id="modelTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable" onclick="sortTable(0)">Modell</th>
+                            <th class="sortable" onclick="sortTable(1)">Arena ELO</th>
+                            <th class="sortable" onclick="sortTable(2)">ARC-AGI-2</th>
+                            <th class="sortable" onclick="sortTable(3)">SWE-Bench</th>
+                            <th class="sortable" onclick="sortTable(4)">MMLU-Pro</th>
+                            <th class="sortable" onclick="sortTable(5)">GPQA</th>
+                            <th class="sortable" onclick="sortTable(6)">Kosten In/Out</th>
+                            <th>Kontext</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modelTableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="comparison-tool">
+                <h3>🎨 Modell-Vergleich Visualisierung</h3>
+                <div class="model-selector" id="modelSelector">
+                </div>
+                <div class="chart-container">
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Benchmarks Section -->
+        <section id="benchmarks" class="section">
+            <h2><span class="icon">📈</span>Benchmark-Analyse</h2>
+            
+            <div class="insight-card danger">
+                <div class="insight-title">⚠️ Kritische Inkonsistenz: ARC-AGI-2 vs. MMLU</div>
+                <p>DeepSeek V3.2 erreicht 85% MMLU-Pro, aber nur 4% ARC-AGI-2. "Buchwissen" ist kein Indikator für fluide Intelligenz. 
+                Für wirklich neuartige Probleme (R&D) ARC-AGI-2-Leistung bevorzugen.</p>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="benchmarkChart"></canvas>
+            </div>
+
+            <h3>Kosten vs. Leistung</h3>
+            <div class="chart-container">
+                <canvas id="costPerfChart"></canvas>
+            </div>
+
+            <div class="stats-grid">
+                <div class="use-case-card">
+                    <h4>🏆 SWE-Bench Leader</h4>
+                    <p><strong>Claude Opus 4.6</strong></p>
+                    <p>80.8% - Höchster jemals gemessener Wert für reale Softwareentwicklung</p>
+                </div>
+                <div class="use-case-card">
+                    <h4>🧠 ARC-AGI-2 Champion</h4>
+                    <p><strong>Gemini 3.1 Pro</strong></p>
+                    <p>77.1% - Beste fluide Intelligenz und abstraktes Reasoning</p>
+                </div>
+                <div class="use-case-card">
+                    <h4>💻 Computer-Use Pioneer</h4>
+                    <p><strong>GPT-5.4</strong></p>
+                    <p>75% OSWorld - Erstes Modell über humanem Durchschnitt</p>
+                </div>
+                <div class="use-case-card">
+                    <h4>💰 Value Champion</h4>
+                    <p><strong>Claude Sonnet 4.6</strong></p>
+                    <p>79.6% SWE-Bench zu 1/5 des Opus-Preises</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Use Cases Section -->
+        <section id="usecases" class="section">
+            <h2><span class="icon">💼</span>Empfohlene Business Use Cases</h2>
+            
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Unternehmensgröße</label>
+                    <select id="companySize" onchange="filterUseCases()">
+                        <option value="all">Alle</option>
+                        <option value="enterprise">Enterprise (>10.000)</option>
+                        <option value="mid">Mid-Size (500-10.000)</option>
+                        <option value="startup">Startup (<500)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Priorität</label>
+                    <select id="priority" onchange="filterUseCases()">
+                        <option value="all">Alle</option>
+                        <option value="quality">Höchste Qualität</option>
+                        <option value="cost">Kostenoptimierung</option>
+                        <option value="speed">Geschwindigkeit</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="use-case-grid" id="useCaseGrid">
+            </div>
+        </section>
+
+        <!-- Insights Section -->
+        <section id="insights" class="section">
+            <h2><span class="icon">💡</span>Kritische Insights</h2>
+            
+            <div class="insight-card danger">
+                <div class="insight-title">1. ARC-AGI-2 ist der neue Differenzierer</div>
+                <p>Die Diskrepanz zwischen MMLU und ARC-AGI-2 ist dramatisch. GPT-5.4 erreicht 90%+ MMLU, aber nur 73.3% ARC-AGI-2. 
+                Für R&D und strategische Planung: ARC-AGI-2-Leistung bevorzugen.</p>
+            </div>
+
+            <div class="insight-card">
+                <div class="insight-title">2. Der "Verbosity Bias" in Chatbot Arena</div>
+                <p>Arena ELO korreliert schwach mit realer Produktivität. Grok-4.20 hat höheres ELO als Claude Opus 4.6, 
+                aber 10% niedrigere SWE-Bench-Performance. Task-basierte Benchmarks bevorzugen.</p>
+            </div>
+
+            <div class="insight-card success">
+                <div class="insight-title">3. Preis-Kollaps bei Open-Weights</div>
+                <p>Nemotron 3 Super bietet 83.7% MMLU-Pro bei nur $0.50/M Output - 50x günstiger als Claude Opus 4.6 
+                bei nur 20% Qualitätsunterschied. Hybrid-Routing ist optimal.</p>
+            </div>
+
+            <div class="insight-card">
+                <div class="insight-title">4. Kontextfenster-Inflation</div>
+                <p>1M Token ist Standard, Nemotron 3 Ultra bietet 10M. Aber: Lange Kontextfenster garantieren keine 
+                perfekte Informationsextraktion (MRCR v2 <70% bei den meisten Modellen).</p>
+            </div>
+
+            <h3>Strategische Empfehlungen</h3>
+            <div class="stats-grid">
+                <div class="use-case-card">
+                    <h4>🏢 Enterprise (>10.000)</h4>
+                    <ul style="margin-left: 20px; line-height: 2;">
+                        <li>Claude Opus 4.6 für kritische Entwicklung</li>
+                        <li>GPT-5.4 für Computer-Use-Automation</li>
+                        <li>Nemotron 3 Super für Hochvolumen</li>
+                        <li>Kimi K2.5 für Open-Source</li>
+                    </ul>
+                    <p><strong>Kosten:</strong> $50-200M/Jahr</p>
+                </div>
+                <div class="use-case-card">
+                    <h4>🏭 Mid-Size (500-10.000)</h4>
+                    <ul style="margin-left: 20px; line-height: 2;">
+                        <li>Claude Sonnet 4.6 als Workhorse (80%)</li>
+                        <li>Gemini 3.1 Pro für lange Dokumente</li>
+                        <li>DeepSeek V3.2 für Bulk-Verarbeitung</li>
+                    </ul>
+                    <p><strong>Kosten:</strong> $5-20M/Jahr</p>
+                </div>
+                <div class="use-case-card">
+                    <h4>🚀 Startup (<500)</h4>
+                    <ul style="margin-left: 20px; line-height: 2;">
+                        <li>Nemotron 3 Super (Self-Hosted)</li>
+                        <li>Kimi K2.5 Open Weights (lokal)</li>
+                        <li>Sonnet 4.6 nur für kritische Tasks</li>
+                    </ul>
+                    <p><strong>Kosten:</strong> $500K-2M/Jahr</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Model Data
+        const models = [
+            { name: 'Claude Opus 4.6', arena: 1503, arc: 68.8, swe: 80.8, mmlu: 91.3, gpqa: 91.3, costIn: 5.00, costOut: 25.00, context: '200K', category: 'premium', type: 'proprietary' },
+            { name: 'GPT-5.4-high', arena: 1538, arc: 73.3, swe: 57.7, mmlu: 92.0, gpqa: 84.2, costIn: 2.50, costOut: 15.00, context: '1M', category: 'mid', type: 'proprietary' },
+            { name: 'Gemini 3.1 Pro', arena: 1492, arc: 77.1, swe: 76.8, mmlu: 91.9, gpqa: 94.3, costIn: 2.00, costOut: 12.00, context: '2M', category: 'mid', type: 'proprietary' },
+            { name: 'Grok-4.20', arena: 1518, arc: 16.0, swe: 70.0, mmlu: 87.0, gpqa: 88.0, costIn: 3.00, costOut: 15.00, context: '1M', category: 'mid', type: 'proprietary' },
+            { name: 'Claude Sonnet 4.6', arena: 1460, arc: 58.3, swe: 79.6, mmlu: 89.9, gpqa: 89.9, costIn: 3.00, costOut: 15.00, context: '1M', category: 'mid', type: 'proprietary' },
+            { name: 'Kimi K2.5', arena: 1438, arc: 34.0, swe: 76.8, mmlu: 87.1, gpqa: 87.0, costIn: 0, costOut: 0, context: '256K', category: 'open', type: 'open' },
+            { name: 'Nemotron 3 Super', arena: 1348, arc: 25.0, swe: 60.5, mmlu: 83.7, gpqa: 79.2, costIn: 0.10, costOut: 0.50, context: '1M', category: 'budget', type: 'open' },
+            { name: 'DeepSeek V3.2', arena: 1423, arc: 4.0, swe: 67.8, mmlu: 85.0, gpqa: 74.8, costIn: 0.28, costOut: 0.42, context: '130K', category: 'budget', type: 'open' },
+            { name: 'Qwen 3.5', arena: 1450, arc: 52.0, swe: 76.4, mmlu: 87.8, gpqa: 86.0, costIn: 1.20, costOut: 4.80, context: '262K', category: 'budget', type: 'open' },
+            { name: 'Mistral Large 3', arena: 1416, arc: 38.0, swe: 72.0, mmlu: 85.0, gpqa: 84.0, costIn: 2.00, costOut: 6.00, context: '256K', category: 'mid', type: 'open' }
+        ];
+
+        const useCases = [
+            { name: 'Autonomes Software-Engineering', model: 'Claude Opus 4.6', alt: 'Claude Sonnet 4.6', roi: 'high', size: 'all', priority: 'quality', metric: '80.8% SWE-Bench' },
+            { name: 'KI-gesteuerte Computer-Automation', model: 'GPT-5.4', alt: 'Gemini 3.1 Pro', roi: 'high', size: 'all', priority: 'quality', metric: '75% OSWorld' },
+            { name: 'Enterprise RAG (Mio. Dokumente)', model: 'Nemotron 3 Ultra', alt: 'Gemini 3.1 Pro', roi: 'high', size: 'enterprise', priority: 'quality', metric: '10M Kontext' },
+            { name: 'Multi-Agent-Orchestrierung', model: 'Kimi K2.5', alt: 'GPT-5.4', roi: 'high', size: 'all', priority: 'quality', metric: '100 parallele Agenten' },
+            { name: 'Kundensupport (Hochvolumen)', model: 'Nemotron 3 Super', alt: 'DeepSeek V3.2', roi: 'high', size: 'all', priority: 'cost', metric: '$0.50/M, 83.7% Qualität' },
+            { name: 'Wissenschaftliche Forschung', model: 'Gemini 3.1 Pro', alt: 'Claude Opus 4.6', roi: 'high', size: 'all', priority: 'quality', metric: '94.3% GPQA' },
+            { name: 'Echtzeit-Entwickler-Assistenz', model: 'Claude Sonnet 4.6', alt: 'Nemotron 3 Super', roi: 'high', size: 'all', priority: 'speed', metric: '79.6% SWE, 2x schneller' },
+            { name: 'On-Premise/Compliance', model: 'Kimi K2.5', alt: 'Nemotron 3 Super', roi: 'medium', size: 'enterprise', priority: 'cost', metric: 'Open Weights' },
+            { name: 'Content-Generierung (Bulk)', model: 'Nemotron 3 Super', alt: 'DeepSeek V3.2', roi: 'medium', size: 'mid', priority: 'cost', metric: 'Kosten-effizient' },
+            { name: 'Rechtliche Dokumentenprüfung', model: 'Claude Opus 4.6', alt: 'Gemini 3.1 Pro', roi: 'medium', size: 'all', priority: 'quality', metric: 'Präzision, Zitation' }
+        ];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            renderTable(models);
+            renderModelSelector();
+            renderUseCases();
+            initCharts();
+        });
+
+        // Navigation
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // Table Rendering
+        function renderTable(data) {
+            const tbody = document.getElementById('modelTableBody');
+            tbody.innerHTML = data.map(m => `
+                <tr>
+                    <td><span class="model-name">${m.name}</span> ${getBadges(m)}</td>
+                    <td><div class="progress-bar"><div class="progress-fill" style="width: ${(m.arena/1600)*100}%"></div></div> ${m.arena}</td>
+                    <td>${m.arc}%</td>
+                    <td>${m.swe}%</td>
+                    <td>${m.mmlu}%</td>
+                    <td>${m.gpqa}%</td>
+                    <td>$${m.costIn.toFixed(2)} / $${m.costOut.toFixed(2)}</td>
+                    <td>${m.context}</td>
+                </tr>
+            `).join('');
+        }
+
+        function getBadges(m) {
+            let badges = '';
+            if (m.category === 'premium') badges += '<span class="badge badge-premium">PREMIUM</span>';
+            if (m.category === 'budget') badges += '<span class="badge badge-budget">BUDGET</span>';
+            if (m.type === 'open') badges += '<span class="badge badge-open">OPEN</span>';
+            return badges;
+        }
+
+        // Filtering
+        function filterModels() {
+            const category = document.getElementById('categoryFilter').value;
+            let filtered = models;
+            if (category !== 'all') {
+                filtered = models.filter(m => m.category === category || m.type === category);
+            }
+            renderTable(filtered);
+        }
+
+        function sortModels() {
+            const sortBy = document.getElementById('sortBy').value;
+            const sorted = [...models].sort((a, b) => b[sortBy] - a[sortBy]);
+            renderTable(sorted);
+        }
+
+        // Table Sorting
+        let sortDirection = {};
+        function sortTable(colIndex) {
+            const keys = ['name', 'arena', 'arc', 'swe', 'mmlu', 'gpqa', 'costIn'];
+            const key = keys[colIndex];
+            sortDirection[key] = !sortDirection[key];
+            
+            const sorted = [...models].sort((a, b) => {
+                if (sortDirection[key]) return a[key] > b[key] ? 1 : -1;
+                return a[key] < b[key] ? 1 : -1;
+            });
+            renderTable(sorted);
+        }
+
+        // Model Selector for Radar Chart
+        function renderModelSelector() {
+            const container = document.getElementById('modelSelector');
+            container.innerHTML = models.slice(0, 5).map((m, i) => `
+                <label class="model-checkbox ${i < 3 ? 'checked' : ''}">
+                    <input type="checkbox" value="${i}" ${i < 3 ? 'checked' : ''} onchange="updateRadarChart()">
+                    ${m.name}
+                </label>
+            `).join('');
+        }
+
+        // Use Cases
+        function renderUseCases() {
+            const grid = document.getElementById('useCaseGrid');
+            grid.innerHTML = useCases.map(u => `
+                <div class="use-case-card ${u.roi === 'high' ? 'recommended' : ''}" data-size="${u.size}" data-priority="${u.priority}">
+                    <span class="roi-badge roi-${u.roi}">${u.roi === 'high' ? '⭐⭐⭐⭐⭐' : '⭐⭐⭐⭐'} ROI</span>
+                    <h4>${u.name}</h4>
+                    <p><strong>Empfohlen:</strong> ${u.model}</p>
+                    <p><strong>Alternative:</strong> ${u.alt}</p>
+                    <p><strong>Metrik:</strong> ${u.metric}</p>
+                </div>
+            `).join('');
+        }
+
+        function filterUseCases() {
+            const size = document.getElementById('companySize').value;
+            const priority = document.getElementById('priority').value;
+            
+            document.querySelectorAll('.use-case-card').forEach(card => {
+                const cardSize = card.getAttribute('data-size');
+                const cardPriority = card.getAttribute('data-priority');
+                
+                const sizeMatch = size === 'all' || cardSize === size || cardSize === 'all';
+                const priorityMatch = priority === 'all' || cardPriority === priority;
+                
+                card.style.display = sizeMatch && priorityMatch ? 'block' : 'none';
+            });
+        }
+
+        // Charts
+        function initCharts() {
+            // Timeline Chart
+            new Chart(document.getElementById('timelineChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Claude Opus 4.6', 'Claude Sonnet 4.6', 'Gemini 3.1 Pro', 'GPT-5.4', 'Nemotron 3 Super'],
+                    datasets: [{
+                        label: 'SWE-Bench Score (%)',
+                        data: [80.8, 79.6, 76.8, 57.7, 60.5],
+                        backgroundColor: 'rgba(37, 99, 235, 0.8)'
+                    }, {
+                        label: 'ARC-AGI-2 Score (%)',
+                        data: [68.8, 58.3, 77.1, 73.3, 25.0],
+                        backgroundColor: 'rgba(124, 58, 237, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Benchmark-Performance vs. Release-Datum (Feb-März 2026)' }
+                    }
+                }
+            });
+
+            // Benchmark Chart
+            new Chart(document.getElementById('benchmarkChart'), {
+                type: 'bar',
+                data: {
+                    labels: models.map(m => m.name),
+                    datasets: [{
+                        label: 'SWE-Bench (%)',
+                        data: models.map(m => m.swe),
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)'
+                    }, {
+                        label: 'ARC-AGI-2 (%)',
+                        data: models.map(m => m.arc),
+                        backgroundColor: 'rgba(245, 158, 11, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        title: { display: true, text: 'Vergleich: Software-Engineering vs. Fluide Intelligenz' }
+                    }
+                }
+            });
+
+            // Cost Performance Chart
+            new Chart(document.getElementById('costPerfChart'), {
+                type: 'scatter',
+                data: {
+                    datasets: models.filter(m => m.costOut > 0).map(m => ({
+                        label: m.name,
+                        data: [{ x: m.costOut, y: m.swe }],
+                        backgroundColor: m.category === 'premium' ? '#ef4444' : 
+                                        m.category === 'budget' ? '#10b981' : '#3b82f6'
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            title: { display: true, text: 'Kosten pro 1M Output Tokens ($)' },
+                            type: 'logarithmic'
+                        },
+                        y: { title: { display: true, text: 'SWE-Bench Score (%)' } }
+                    },
+                    plugins: {
+                        title: { display: true, text: 'Preis-Leistungs-Verhältnis (logarithmisch)' }
+                    }
+                }
+            });
+
+            // Radar Chart
+            updateRadarChart();
+        }
+
+        function updateRadarChart() {
+            const checkboxes = document.querySelectorAll('.model-checkbox input:checked');
+            const selectedIndices = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            const selectedModels = selectedIndices.map(i => models[i]);
+
+            if (window.radarChart) window.radarChart.destroy();
+
+            window.radarChart = new Chart(document.getElementById('radarChart'), {
+                type: 'radar',
+                data: {
+                    labels: ['Arena ELO', 'ARC-AGI-2', 'SWE-Bench', 'MMLU-Pro', 'GPQA', 'Kosteneffizienz'],
+                    datasets: selectedModels.map(m => ({
+                        label: m.name,
+                        data: [
+                            m.arena / 16,
+                            m.arc,
+                            m.swe,
+                            m.mmlu,
+                            m.gpqa,
+                            Math.max(0, 100 - m.costOut * 3)
+                        ],
+                        fill: true,
+                        backgroundColor: `rgba(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255}, 0.2)`,
+                        borderColor: `rgba(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255}, 1)`
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
